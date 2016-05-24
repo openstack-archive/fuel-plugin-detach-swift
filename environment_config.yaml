@@ -1,0 +1,19 @@
+attributes:
+  metadata:
+    label: "Swift settings"
+    weight: 90
+  proxy_on_controller_checkbox:
+    type: "checkbox"
+    weight: 30
+    value: false
+    label: "Install swift proxy on separate node(s)"
+    description: "Enable this checkbox if you want to install swift proxy on separate node(s)"
+  partition_power:
+    value: "15"
+    label: "Swift partition power"
+    description: "Swift partition power used to compute total partition"
+    weight: 25
+    type: "text"
+    regex:
+      source: '[1-9][0-9]'
+      error: "You must provide a valid number in the range 10:99"

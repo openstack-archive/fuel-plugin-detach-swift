@@ -1,0 +1,41 @@
+version 1: commit 68f376c9773f612ae3118c55f829254722dc3772
+* no proxy role
+* proxy + object on controllers. No way to install only proxy
+* object on newrole-swift
+
+version 2:
+* Change plugin name to 'detach-swift'
+* New role is introduced: swift-object
+* Not yet swift-proxy role. The controller are used for proxy
+* On controllers only swift proxy
+* Swift object on dedicated node without proxy
+* Rsync problem: on primary-controller the rsyncd.conf file is not update:
+  the problem is in the 'compile fragments' in deployment/puppet/rsync/manifests/server.pp
+  To solve the problem a script that execute 'compile fragments' at the end of primary-controller
+  deployment is added. In this way it forces to update rsyncd.conf file.
+  If not the ring file synchronization is not possible for the resource missing.
+* This version need a fix in fuel-library:
+  On file deployment/puppet/osnailyfacter/modular/swift/swift.pp:
+  $swift_nodes = pick(hiera('swift_object_nodes', undef), hiera('swift_nodes', undef), hiera('controllers', undef))
+  This because the variable is used when adding the nodes to the ring, but from globals.pp
+  all swift nodes are included, not only object nodes. The plugin add to 'swift_object_nodes' section
+  only object nodes
+
+version 3:
+* Roles name change: swift-object -> standalone-swift-object
+* Remove primary swift object role.
+* New role is introduced: standalone-swift-proxy.
+* standalone-swift-proxy and primary-standalone-swift-proxy are on separated nodes
+  and have their virtual ip and their haproxy and corosync configuration
+* Need a patch in fuel-library file deployment/puppet/osnailyfacter/modular/swift/keystone.pp:
+  $admin_address    = pick(hiera('swift_proxy_management_vip', undef),  hiera('management_vip'))
+  and
+  $public_address   = $public_ssl_hash['services'] ? {
+    true    => pick(hiera('swift_proxy_public_vip', undef), $public_ssl_hash['hostname']),
+    default => $public_vip,
+  }
+* No way to install standalone-swift-proxy on controller and no way to install proxy and object on the same node
+
+version 4:
+* Add option that give the possibility to install proxy on separated nodes. If this option is not checked
+  the swift proxy is install on controllers as usual. Swift object is always on separate nodes.

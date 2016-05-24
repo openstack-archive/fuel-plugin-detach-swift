@@ -1,0 +1,120 @@
+- id: swift-hiera-override
+  type: puppet
+  groups: [primary-controller, controller,
+  standalone-swift-object,
+  standalone-swift-proxy, primary-standalone-swift-proxy]
+  requires: [globals]
+  required_for: [deploy_end, logging, controller, primary-controller]
+  parameters:
+    puppet_manifest: "swift_hiera_override.pp"
+    puppet_modules: "/etc/puppet/modules"
+    timeout: 120
+
+- id: swift-hiera-override-predeploy
+  type: puppet
+  groups: [primary-controller, controller,
+  standalone-swift-object,
+  standalone-swift-proxy, primary-standalone-swift-proxy]
+  requires: [hiera]
+  required_for: [globals]
+  parameters:
+    puppet_manifest: "swift_hiera_override_predeploy.pp"
+    puppet_modules: "/etc/puppet/modules"
+    timeout: 120
+
+- id: update-rsyncd
+  type: puppet
+  groups: [primary-standalone-swift-proxy, primary-controller]
+  requires: [swift]
+  parameters:
+    puppet_manifest: "update_rsyncd.pp"
+    puppet_modules: "/etc/puppet/modules"
+    timeout: 120
+
+- id: standalone-swift-object
+  type: group
+  role: [standalone-swift-object]
+  requires: [deploy_start, controller, primary-standalone-swift-proxy, standalone-swift-proxy]
+  required_for: [deploy_end]
+  tasks: [deploy-swift, swift-hiera-override,
+    deploy_start, firewall, fuel_pkgs,
+    globals, hiera, hosts, logging, netconfig, tools]
+  parameters:
+    strategy:
+      type: parallel
+
+- id: standalone-swift-proxy
+  type: group
+  role: [standalone-swift-proxy]
+  requires: [deploy_start, primary-standalone-swift-proxy]
+  required_for: [deploy_end]
+  tasks: [deploy-swift, cluster, swift-hiera-override,
+    deploy_start, firewall, fuel_pkgs,
+    cluster-haproxy, openstack-haproxy-stats,
+    globals, hiera, hosts, logging, netconfig, tools,
+    swift-vip]
+  parameters:
+    strategy:
+      type: parallel
+
+- id: primary-standalone-swift-proxy
+  type: group
+  role: [primary-standalone-swift-proxy]
+  requires: [deploy_start, swift-haproxy]
+  required_for: [deploy_end]
+  tasks: [deploy-swift, cluster, swift-vip,
+    deploy_start, firewall, fuel_pkgs, memcached,
+    cluster-haproxy, openstack-haproxy-stats,
+    globals, hiera, hosts, logging, netconfig, tools]
+  parameters:
+    strategy:
+      type: one_by_one
+
+- id: deploy-swift
+  type: puppet
+  role: [standalone-swift-proxy, primary-standalone-swift-proxy, standalone-swift-object]
+  requires: [deploy_start, swift-haproxy, swift-vip,
+  memcached, swift-hiera-override]
+  required_for: [openstack-controller]
+  parameters:
+    puppet_manifest: "/etc/puppet/modules/osnailyfacter/modular/swift/swift.pp"
+    puppet_modules: "/etc/puppet/modules"
+    timeout: 3600
+  test_pre:
+    cmd: ruby /etc/puppet/modules/osnailyfacter/modular/swift/swift_pre.rb
+  test_post:
+    cmd: ruby /etc/puppet/modules/osnailyfacter/modular/swift/swift_post.rb
+
+- id: swift-haproxy
+  type: puppet
+  groups: [primary-standalone-swift-proxy, standalone-swift-proxy, openstack-haproxy-stats]
+  required_for: [deploy-swift, deploy_end]
+  requires: [deploy_start, cluster-haproxy, swift-vip]
+  parameters:
+    puppet_manifest: 'haproxy.pp'
+    puppet_modules: '/etc/puppet/modules'
+    timeout: 3600
+
+- id: swift-vip
+  type: puppet
+  groups: [primary-standalone-swift-proxy, standalone-swift-proxy]
+  required_for: [deploy_end]
+  requires: [cluster]
+  parameters:
+    puppet_manifest: '/etc/puppet/modules/osnailyfacter/modular/virtual_ips/virtual_ips.pp'
+    puppet_modules: '/etc/puppet/modules'
+    timeout: 3600
+
+- id: new-swift-rebalance-cron
+  type: puppet
+  required_for: [deploy_end]
+  requires: [standalone-swift-object, standalone-swift-proxy]
+  parameters:
+    puppet_manifest: /etc/puppet/modules/osnailyfacter/modular/swift/rebalance_cronjob.pp
+    puppet_modules: /etc/puppet/modules
+    timeout: 300
+  test_pre:
+    cmd: ruby /etc/puppet/modules/osnailyfacter/modular/swift/swift_post.rb
+  test_post:
+    cmd: ruby /etc/puppet/modules/osnailyfacter/modular/swift/rebalance_cronjob_post.rb
+
