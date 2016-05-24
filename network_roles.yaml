@@ -1,0 +1,21 @@
+- id: 'swift_proxy_management_vip'
+  default_mapping: 'management'
+  properties:
+    subnet: true
+    gateway: false
+    vip:
+       - name: 'proxy_swift_management'
+         namespace: 'haproxy'
+         alias: 'proxy_swift_management'
+         node_roles: ["primary-standalone-swift-proxy", "standalone-swift-proxy"]
+
+- id: 'swift_proxy_public_vip'
+  default_mapping: 'public'
+  properties:
+    subnet: true
+    gateway: true
+    vip:
+       - name: 'proxy_swift_public'
+         namespace: 'haproxy'
+         alias: 'proxy_swift_public'
+         node_roles: ["primary-standalone-swift-proxy", "standalone-swift-proxy"]

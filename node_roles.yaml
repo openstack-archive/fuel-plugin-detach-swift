@@ -1,0 +1,42 @@
+standalone-swift-object:
+  # Role name
+  name: "standalone-swift-object"
+  # Role description
+  description: "Node with swift object storage. No proxy"
+  # If primaty then during orchestration this role will be
+  # splitted into primary-role and role
+  has_primary: false
+  # Assign public IP to node if true
+  public_ip_required: false
+  # Weight that will be used to sort out the
+  # roles on the Fuel web UI
+  weight: 1000
+  limits:
+    min: 1
+
+standalone-swift-proxy:
+  # Role name
+  name: "standalone-swift-proxy"
+  # Role description
+  description: "Node with swift proxy. No storage"
+  # If primaty then during orchestration this role will be
+  # splitted into primary-role and role
+  has_primary: true
+  # Assign public IP to node if true
+  public_ip_required: true
+  # Weight that will be used to sort out the
+  # roles on the Fuel web UI
+  restrictions:
+    - condition: "settings:detach-swift.proxy_on_controller_checkbox.value == false"
+      message: "Need to enable the 'Install swift proxy on separate node(s)'"
+  conflicts:
+    - controller
+    - compute
+    - standalone-swift-object
+    - ceph-osd
+  weight: 1000
+  limits:
+    min: 1
+  update_required:
+    - standalone-swift-proxy
+    - controller
